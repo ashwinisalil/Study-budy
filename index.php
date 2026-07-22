@@ -52,8 +52,8 @@ if (isset($_SESSION['user_id'])) {
             <!-- Login Form -->
             <form id="login-form" class="auth-form">
                 <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" name="email" required placeholder="your.email@university.edu">
+                    <label>Email or Username</label>
+                    <input type="text" name="login_identifier" id="login_identifier" required placeholder="Email or Username">
                 </div>
                 <div class="form-group">
                     <label>Password</label>

@@ -25,6 +25,7 @@ $username = $_SESSION['username'] ?? '';
         <?php if ($is_admin): ?>
             <a href="admin.php">Admin Dashboard</a>
         <?php endif; ?>
+        <a href="profile.php" class="btn btn-secondary" style="text-decoration: none;">My Profile</a>
         <button class="btn btn-primary" onclick="openModal('upload-modal')">Upload Document</button>
         <button class="btn btn-secondary" id="logout-btn">Logout</button>
     </div>

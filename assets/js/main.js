@@ -383,3 +383,34 @@ async function adminAction(id, status) {
 if (document.getElementById('admin-pending-table')) {
     loadAdminPending();
 }
+
+// Profile Update Form
+const profileForm = document.getElementById('profile-form');
+if (profileForm) {
+    profileForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(profileForm);
+        formData.append('action', 'update');
+        
+        const submitBtn = profileForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerText;
+        submitBtn.innerText = 'Saving...';
+        submitBtn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE}/profile.php`, { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (err) {
+            showToast('Failed to update profile.', 'error');
+        } finally {
+            submitBtn.innerText = originalText;
+            submitBtn.disabled = false;
+        }
+    });
+}

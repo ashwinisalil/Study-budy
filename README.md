@@ -12,6 +12,7 @@ A centralized, access-controlled educational web application.
 
 3. **Running the Application:**
    - Ensure the project folder (`study_budy_php`) is inside your `htdocs` or equivalent server root.
+   - Ensure the `uploads/` folder is writable by the web server (e.g., `chmod 0777 uploads` if deploying on Linux/macOS).
    - Start Apache and MySQL via XAMPP/MAMP/WAMP.
    - Navigate to `http://localhost/study_budy_php/` in your browser.
 
@@ -21,7 +22,9 @@ A centralized, access-controlled educational web application.
    - Log in, and you will see the Admin Dashboard link.
 
 ## Features
-- **Cream & Espresso Theme:** A highly decorative, visually appealing UI.
+- **Cream & Espresso Theme:** A highly decorative, visually appealing UI with glassmorphism.
+- **User Profiles:** Editable bios, and tracking of uploaded documents and achievements.
+- **Gamified Credit System:** Earn credits based on document uploads and unlock milestone rewards (e.g., Google Play Vouchers).
 - **Upload Queue:** Documents are kept pending until approved by an admin.
 - **Engagement:** Rate documents (1-5), bookmark them, and leave comments.
 - **Robust Security:** PDO prepared statements, file size, and strict MIME type validations on backend.

@@ -39,17 +39,17 @@ if ($action === 'register') {
         }
     }
 } elseif ($action === 'login') {
-    $email = trim($_POST['email'] ?? '');
+    $identifier = trim($_POST['login_identifier'] ?? '');
     $password = $_POST['password'] ?? '';
     
-    if (empty($email) || empty($password)) {
-        echo json_encode(['status' => 'error', 'message' => 'Email and password are required.']);
+    if (empty($identifier) || empty($password)) {
+        echo json_encode(['status' => 'error', 'message' => 'Email/Username and password are required.']);
         exit;
     }
     
     try {
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-        $stmt->execute([$email]);
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? OR username = ?");
+        $stmt->execute([$identifier, $identifier]);
         $user = $stmt->fetch();
         
         if ($user && password_verify($password, $user['password'])) {
