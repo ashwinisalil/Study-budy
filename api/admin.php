@@ -29,10 +29,63 @@ if ($action === 'list_pending') {
     }
     
     try {
+        $pdo->beginTransaction();
+        
+        // 1. Update the document status
         $stmt = $pdo->prepare("UPDATE documents SET status = ? WHERE id = ?");
         $stmt->execute([$status, $id]);
+        
+        // 2. If approved, calculate and award credits
+        if ($status === 'approved') {
+            // Fetch the document details to get the user and file info
+            $docStmt = $pdo->prepare("SELECT user_id, file_path, file_type FROM documents WHERE id = ?");
+            $docStmt->execute([$id]);
+            $doc = $docStmt->fetch();
+            
+            if ($doc) {
+                $docUserId = $doc['user_id'];
+                
+                // Fetch the user's current upload count with a lock
+                $userStmt = $pdo->prepare("SELECT upload_count FROM users WHERE id = ? FOR UPDATE");
+                $userStmt->execute([$docUserId]);
+                $userData = $userStmt->fetch();
+                $uploadCount = $userData['upload_count'] ?? 0;
+                
+                $creditsAwarded = 0;
+                if ($uploadCount < 3) {
+                    $creditsAwarded = 20; // Phase 1
+                } else {
+                    // Phase 2
+                    if (strpos($doc['file_type'], 'pdf') !== false) {
+                        $full_path = __DIR__ . '/../' . $doc['file_path'];
+                        if (file_exists($full_path)) {
+                            $content = file_get_contents($full_path);
+                            if (preg_match_all('/\/Page\W/', $content, $matches)) {
+                                $pages = count($matches[0]);
+                                $creditsAwarded = max($pages * 2, 2);
+                            } else {
+                                $creditsAwarded = 2; // Fallback
+                            }
+                        } else {
+                            $creditsAwarded = 2; // Fallback if file missing
+                        }
+                    } else {
+                        $creditsAwarded = 2; // Images/PPTs
+                    }
+                }
+                
+                // Update the user's upload count and credits
+                $updateUser = $pdo->prepare("UPDATE users SET upload_count = upload_count + 1, credits = credits + ? WHERE id = ?");
+                $updateUser->execute([$creditsAwarded, $docUserId]);
+            }
+        }
+        
+        $pdo->commit();
         echo json_encode(['status' => 'success', 'message' => 'Document ' . $status]);
-    } catch (PDOException $e) {
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         echo json_encode(['status' => 'error', 'message' => 'Database error.']);
     }
 } elseif ($action === 'delete') {
