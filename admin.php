@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['principle', 'faculty'])) {
     header("Location: index.php");
     exit;
 }
@@ -19,8 +19,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 <nav>
     <a href="index.php" class="brand">Study Budy</a>
     <div class="nav-links">
-        <span>Admin Mode</span>
-        <a href="index.php">Back to App</a>
+        <h2><?= $_SESSION['role'] === 'principle' ? 'Principle Dashboard' : 'Faculty Dashboard - ' . htmlspecialchars($_SESSION['assigned_subject'] ?? '') ?></h2>
+        <a href="dashboard.php" class="btn btn-secondary" style="text-decoration: none;">Back to Repository</a>
         <button class="btn btn-secondary" id="logout-btn">Logout</button>
     </div>
 </nav>
@@ -33,7 +33,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
                 <tr>
                     <th>Title</th>
                     <th>User</th>
-                    <th>Category / Tag</th>
+                    <th>Subject / Tag</th>
                     <th>Size</th>
                     <th>File</th>
                     <th>Actions</th>
@@ -44,6 +44,25 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
             </tbody>
         </table>
     </div>
+    
+    <?php if ($_SESSION['role'] === 'principle'): ?>
+    <div class="card glass" style="margin-top: 2rem;">
+        <h3>Manage Faculty Assignments</h3>
+        <table class="data-table" id="faculty-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Assigned Subject</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Loaded via JS -->
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
 </main>
 
 <div id="toast-container"></div>

@@ -4,7 +4,9 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit;
 }
-$is_admin = $_SESSION['role'] === 'admin';
+$role = $_SESSION['role'] ?? 'student';
+$is_principle = $role === 'principle';
+$is_faculty = $role === 'faculty';
 $username = $_SESSION['username'] ?? '';
 ?>
 <!DOCTYPE html>
@@ -22,8 +24,10 @@ $username = $_SESSION['username'] ?? '';
     <a href="dashboard.php" class="brand">Study Budy</a>
     <div class="nav-links">
         <span>Welcome, <?= htmlspecialchars($username) ?></span>
-        <?php if ($is_admin): ?>
-            <a href="admin.php">Admin Dashboard</a>
+        <?php if ($is_principle): ?>
+            <a href="admin.php">Principle Dashboard</a>
+        <?php elseif ($is_faculty): ?>
+            <a href="admin.php">Faculty Dashboard</a>
         <?php endif; ?>
         <a href="profile.php" class="btn btn-secondary" style="text-decoration: none;">My Profile</a>
         <button class="btn btn-primary" onclick="openModal('upload-modal')">Upload Document</button>
@@ -34,11 +38,13 @@ $username = $_SESSION['username'] ?? '';
 <main>
     <div class="search-container">
         <input type="text" id="search-input" placeholder="Search for documents...">
-        <select id="category-filter">
-            <option value="">All Categories</option>
-            <option value="Electronics">Electronics</option>
-            <option value="Sustainability">Sustainability</option>
-            <option value="System Architecture">System Architecture</option>
+        <select id="subject-filter">
+            <option value="">All Subjects</option>
+            <option value="FCSN">FCSN</option>
+            <option value="DSDA">DSDA</option>
+            <option value="FCPP">FCPP</option>
+            <option value="Physics">Physics</option>
+            <option value="EM-2">EM-2</option>
         </select>
         <select id="tag-filter">
             <option value="">All Tags</option>
@@ -71,11 +77,13 @@ $username = $_SESSION['username'] ?? '';
                 <textarea name="description" rows="3"></textarea>
             </div>
             <div class="form-group">
-                <label>Category</label>
-                <select name="category" required>
-                    <option value="Electronics">Electronics</option>
-                    <option value="Sustainability">Sustainability</option>
-                    <option value="System Architecture">System Architecture</option>
+                <label>Subject</label>
+                <select name="subject" required>
+                    <option value="FCSN">FCSN</option>
+                    <option value="DSDA">DSDA</option>
+                    <option value="FCPP">FCPP</option>
+                    <option value="Physics">Physics</option>
+                    <option value="EM-2">EM-2</option>
                 </select>
             </div>
             <div class="form-group">

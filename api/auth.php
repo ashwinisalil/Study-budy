@@ -56,6 +56,15 @@ if ($action === 'register') {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['role'] = $user['role'];
+            $_SESSION['primary_subject'] = $user['primary_subject'] ?? null;
+            
+            if ($user['role'] === 'faculty') {
+                $subStmt = $pdo->prepare("SELECT subject FROM faculty_additional_subjects WHERE user_id = ?");
+                $subStmt->execute([$user['id']]);
+                $_SESSION['additional_subjects'] = $subStmt->fetchAll(PDO::FETCH_COLUMN);
+            } else {
+                $_SESSION['additional_subjects'] = [];
+            }
             
             echo json_encode(['status' => 'success', 'message' => 'Login successful.', 'role' => $user['role']]);
         } else {
@@ -70,7 +79,7 @@ if ($action === 'register') {
     echo json_encode(['status' => 'success', 'message' => 'Logged out successfully.']);
 } elseif ($action === 'check') {
     if (isset($_SESSION['user_id'])) {
-        echo json_encode(['status' => 'success', 'logged_in' => true, 'username' => $_SESSION['username'], 'role' => $_SESSION['role']]);
+        echo json_encode(['status' => 'success', 'logged_in' => true, 'username' => $_SESSION['username'], 'role' => $_SESSION['role'], 'primary_subject' => $_SESSION['primary_subject'] ?? null, 'additional_subjects' => $_SESSION['additional_subjects'] ?? []]);
     } else {
         echo json_encode(['status' => 'success', 'logged_in' => false]);
     }

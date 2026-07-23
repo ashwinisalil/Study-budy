@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $title = trim($_POST['title'] ?? '');
 $description = trim($_POST['description'] ?? '');
-$category = trim($_POST['category'] ?? '');
+$subject = trim($_POST['subject'] ?? '');
 $tag = trim($_POST['tag'] ?? '');
 
 if (empty($title) || !isset($_FILES['document'])) {
@@ -74,8 +74,8 @@ $db_file_path = 'uploads/' . $filename; // Relative for DB
 
 if (move_uploaded_file($file['tmp_name'], $file_path)) {
     try {
-        $stmt = $pdo->prepare("INSERT INTO documents (user_id, title, description, filename, file_path, file_type, size, category, tag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$_SESSION['user_id'], $title, $description, $file['name'], $db_file_path, $mime, $file['size'], $category, $tag]);
+        $stmt = $pdo->prepare("INSERT INTO documents (user_id, title, description, filename, file_path, file_type, size, subject, tag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$_SESSION['user_id'], $title, $description, $file['name'], $db_file_path, $mime, $file['size'], $subject, $tag]);
 
         echo json_encode(['status' => 'success', 'message' => 'File uploaded successfully and is pending admin approval.']);
     } catch (PDOException $e) {

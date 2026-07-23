@@ -7,7 +7,7 @@ $action = $_GET['action'] ?? 'list';
 
 if ($action === 'list') {
     $search = $_GET['search'] ?? '';
-    $category = $_GET['category'] ?? '';
+    $subject = $_GET['subject'] ?? '';
     $tag = $_GET['tag'] ?? '';
     
     $query = "SELECT d.*, u.username, 
@@ -24,9 +24,9 @@ if ($action === 'list') {
         $params[] = "%$search%";
     }
     
-    if (!empty($category)) {
-        $query .= " AND d.category = ?";
-        $params[] = $category;
+    if (!empty($subject)) {
+        $query .= " AND d.subject = ?";
+        $params[] = $subject;
     }
     
     if (!empty($tag)) {

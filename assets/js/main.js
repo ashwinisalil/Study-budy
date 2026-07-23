@@ -164,11 +164,11 @@ async function loadDocuments() {
     if (!grid) return;
 
     const search = document.getElementById('search-input')?.value || '';
-    const category = document.getElementById('category-filter')?.value || '';
+    const subject = document.getElementById('subject-filter')?.value || '';
     const tag = document.getElementById('tag-filter')?.value || '';
 
     try {
-        const res = await fetch(`${API_BASE}/documents.php?action=list&search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&tag=${encodeURIComponent(tag)}`);
+        const res = await fetch(`${API_BASE}/documents.php?action=list&search=${encodeURIComponent(search)}&subject=${encodeURIComponent(subject)}&tag=${encodeURIComponent(tag)}`);
         const data = await res.json();
 
         if (data.status === 'success') {
@@ -189,7 +189,7 @@ async function loadDocuments() {
                         <span>★ ${parseFloat(doc.avg_rating).toFixed(1)}</span>
                     </div>
                     <div class="card-meta" style="margin-top:0.5rem;">
-                        <span class="badge">${doc.category}</span>
+                        <span class="badge">${doc.subject}</span>
                         <span class="badge">${doc.tag}</span>
                     </div>
                 `;
@@ -203,7 +203,7 @@ async function loadDocuments() {
 
 // Search and Filter Listeners
 const searchInput = document.getElementById('search-input');
-const categoryFilter = document.getElementById('category-filter');
+const subjectFilter = document.getElementById('subject-filter');
 const tagFilter = document.getElementById('tag-filter');
 
 if (searchInput) {
@@ -213,7 +213,7 @@ if (searchInput) {
         debounceTimer = setTimeout(loadDocuments, 500);
     });
 }
-if (categoryFilter) categoryFilter.addEventListener('change', loadDocuments);
+if (subjectFilter) subjectFilter.addEventListener('change', loadDocuments);
 if (tagFilter) tagFilter.addEventListener('change', loadDocuments);
 
 
@@ -341,7 +341,7 @@ async function loadAdminPending() {
                 tr.innerHTML = `
                     <td>${doc.title}</td>
                     <td>${doc.username}</td>
-                    <td>${doc.category} / ${doc.tag}</td>
+                    <td>${doc.subject} / ${doc.tag}</td>
                     <td>${(doc.size / 1024 / 1024).toFixed(2)} MB</td>
                     <td><a href="${doc.file_path}" target="_blank">View File</a></td>
                     <td class="admin-actions">
@@ -413,4 +413,74 @@ if (profileForm) {
             submitBtn.disabled = false;
         }
     });
+}
+
+// Faculty Management Logic (Principle Only)
+async function loadFacultyList() {
+    const tbody = document.querySelector('#faculty-table tbody');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/admin.php?action=list_faculty`);
+        const data = await res.json();
+        if (data.status === 'success') {
+            tbody.innerHTML = '';
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">No faculty members found.</td></tr>';
+                return;
+            }
+            const subjects = ['FCSN', 'DSDA', 'FCPP', 'Physics', 'EM-2'];
+            data.data.forEach(fac => {
+                const tr = document.createElement('tr');
+                const additional = fac.additional_subjects ? fac.additional_subjects.split(',') : [];
+                let options = subjects
+                    .filter(s => s !== fac.primary_subject)
+                    .map(s => `<option value="${s}" ${additional.includes(s) ? 'selected' : ''}>${s}</option>`)
+                    .join('');
+                
+                tr.innerHTML = `
+                    <td><a href="profile.php?user_id=${fac.id}" style="color: var(--accent-color); text-decoration: none; font-weight: 500;">${fac.username}</a></td>
+                    <td>${fac.email}</td>
+                    <td>
+                        <span style="font-weight: 600;">Permanent Subject:</span> ${fac.primary_subject || 'None'}<br>
+                        <span style="font-size: 0.85rem; color: var(--text-secondary);">Additional: ${fac.additional_subjects || 'None'}</span>
+                    </td>
+                    <td style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="faculty-subject-${fac.id}" multiple style="padding:0.4rem; border-radius:4px; border:1px solid var(--border-color); height: 60px;">${options}</select>
+                        <button class="btn btn-primary" onclick="updateFaculty(${fac.id})">Update</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    } catch (e) {
+        showToast('Failed to load faculty list.', 'error');
+    }
+}
+
+async function updateFaculty(id) {
+    const select = document.getElementById(`faculty-subject-${id}`);
+    const subjects = Array.from(select.selectedOptions).map(opt => opt.value);
+    
+    const formData = new FormData();
+    formData.append('action', 'update_faculty');
+    formData.append('id', id);
+    formData.append('subjects', JSON.stringify(subjects));
+    
+    try {
+        const res = await fetch(`${API_BASE}/admin.php`, { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            loadFacultyList();
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (e) {
+        showToast('Update failed.', 'error');
+    }
+}
+
+if (document.getElementById('faculty-table')) {
+    loadFacultyList();
 }
