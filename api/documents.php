@@ -69,6 +69,18 @@ if ($action === 'list') {
     } catch (PDOException $e) {
         echo json_encode(['status' => 'error', 'message' => 'Database error.']);
     }
+} elseif ($action === 'my_uploads') {
+    if (!isset($_SESSION['user_id'])) {
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+        exit;
+    }
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM documents WHERE user_id = ? ORDER BY created_at DESC");
+        $stmt->execute([$_SESSION['user_id']]);
+        echo json_encode(['status' => 'success', 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+    } catch (PDOException $e) {
+        echo json_encode(['status' => 'error', 'message' => 'Database error.']);
+    }
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Invalid action.']);
 }

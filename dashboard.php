@@ -137,6 +137,38 @@ $username = $_SESSION['username'] ?? '';
     </div>
 </div>
 
+<!-- Report Modal -->
+<div class="modal-overlay" id="report-modal">
+    <div class="modal-content glass">
+        <div class="modal-header">
+            <h2>Why are you reporting this document?</h2>
+            <button class="close-btn">&times;</button>
+        </div>
+        <form id="report-form">
+            <input type="hidden" name="document_id" id="report-doc-id">
+            <div class="form-group">
+                <label>Reason</label>
+                <select name="reason_type" required>
+                    <option value="">Select a reason...</option>
+                    <option value="Duplicate Content">Duplicate Content</option>
+                    <option value="Inappropriate Content">Inappropriate Content</option>
+                    <option value="Wrong Subject/Tag">Wrong Subject/Tag</option>
+                    <option value="Poor Quality / Unreadable">Poor Quality / Unreadable</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Additional Details (Optional)</label>
+                <textarea name="reason_text" rows="3" placeholder="Provide more context..."></textarea>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">Submit Report</button>
+                <button type="button" class="btn btn-secondary close-modal-btn" style="flex: 1;" onclick="closeModal('report-modal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="assets/js/main.js"></script>
 </body>
 </html>

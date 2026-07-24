@@ -56,6 +56,16 @@ if (!in_array($mime, $allowed_mimes)) {
     exit;
 }
 
+// Fingerprinting Duplicate Prevention
+$file_hash = hash_file('sha256', $file['tmp_name']);
+$hash_check = $pdo->prepare("SELECT id FROM documents WHERE file_hash = ?");
+$hash_check->execute([$file_hash]);
+if ($hash_check->fetch()) {
+    unlink($file['tmp_name']);
+    echo json_encode(['status' => 'error', 'message' => 'Copyright Error: An identical file already exists on the platform.']);
+    exit;
+}
+
 // Secure filename
 $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
 $filename = uniqid('doc_', true) . '.' . $ext;
@@ -74,10 +84,30 @@ $db_file_path = 'uploads/' . $filename; // Relative for DB
 
 if (move_uploaded_file($file['tmp_name'], $file_path)) {
     try {
-        $stmt = $pdo->prepare("INSERT INTO documents (user_id, title, description, filename, file_path, file_type, size, subject, tag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$_SESSION['user_id'], $title, $description, $file['name'], $db_file_path, $mime, $file['size'], $subject, $tag]);
-
+        $stmt = $pdo->prepare("INSERT INTO documents (user_id, title, description, filename, file_path, file_type, size, subject, tag, file_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$_SESSION['user_id'], $title, $description, $file['name'], $db_file_path, $mime, $file['size'], $subject, $tag, $file_hash]);
         echo json_encode(['status' => 'success', 'message' => 'File uploaded successfully and is pending admin approval.']);
+        
+        if ($_SESSION['role'] === 'principle') {
+            try {
+                $msg = "Principal has uploaded a new document: " . htmlspecialchars($title);
+                $usersStmt = $pdo->query("SELECT id FROM users WHERE role IN ('student', 'faculty')");
+                $users = $usersStmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                if (!empty($users)) {
+                    $pdo->beginTransaction();
+                    $notifStmt = $pdo->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)");
+                    foreach ($users as $uid) {
+                        $notifStmt->execute([$uid, $msg]);
+                    }
+                    $pdo->commit();
+                }
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+            }
+        }
     } catch (PDOException $e) {
         unlink($file_path); // Cleanup on DB fail
         echo json_encode(['status' => 'error', 'message' => 'Database error.']);

@@ -28,11 +28,21 @@ CREATE TABLE documents (
     description TEXT,
     filename VARCHAR(255) NOT NULL,
     file_path VARCHAR(255) NOT NULL,
-    file_type VARCHAR(100) NOT NULL,
-    size INT NOT NULL, -- in bytes
+    file_type VARCHAR(50) NOT NULL,
+    size INT NOT NULL,
+    subject VARCHAR(50) NOT NULL,
+    tag VARCHAR(50) NOT NULL,
     status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-    subject VARCHAR(100),
-    tag VARCHAR(100),
+    downloads INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    message TEXT NOT NULL,
+    is_read TINYINT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

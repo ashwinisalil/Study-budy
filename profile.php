@@ -132,6 +132,16 @@ $vouchers_earned = floor($credits / 50);
                 <?php endif; ?>
             </ul>
         </div>
+        
+        <!-- My Uploads Section -->
+        <?php if ($is_own_profile): ?>
+        <div class="profile-card glass" style="margin-top: 2rem; grid-column: 1 / -1;">
+            <h2 style="margin-bottom: 1.5rem; color: var(--text-primary);">My Uploads</h2>
+            <div id="my-uploads-list">
+                <!-- Loaded via JS -->
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 

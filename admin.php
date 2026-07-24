@@ -44,6 +44,23 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['principle', '
             </tbody>
         </table>
     </div>
+    <h2 style="margin-top: 2rem;">Reported Documents</h2>
+    <div style="overflow-x: auto;">
+        <table class="admin-table" id="admin-reports-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Reported By</th>
+                    <th>Reason</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
     
     <?php if ($_SESSION['role'] === 'principle'): ?>
     <div class="card glass" style="margin-top: 2rem;">
@@ -64,6 +81,27 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['principle', '
     </div>
     <?php endif; ?>
 </main>
+
+<!-- Rejection Modal -->
+<div class="modal-overlay" id="rejection-modal">
+    <div class="modal-content glass">
+        <div class="modal-header">
+            <h2>Provide Rejection Feedback</h2>
+            <button class="close-btn">&times;</button>
+        </div>
+        <form id="rejection-form">
+            <input type="hidden" id="reject-doc-id" name="id">
+            <div class="form-group">
+                <label>What should the student improve before re-uploading?</label>
+                <textarea name="rejection_reason" id="rejection-reason" rows="4" required></textarea>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">Confirm Rejection</button>
+                <button type="button" class="btn btn-secondary close-modal-btn" style="flex: 1;" onclick="closeModal('rejection-modal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <div id="toast-container"></div>
 <script src="assets/js/main.js"></script>

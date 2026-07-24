@@ -49,7 +49,7 @@ if ($action === 'list_pending') {
         $pdo->beginTransaction();
         
         // Fetch the document details to check subject
-        $docStmt = $pdo->prepare("SELECT user_id, file_path, file_type, subject FROM documents WHERE id = ? FOR UPDATE");
+        $docStmt = $pdo->prepare("SELECT user_id, file_path, file_type, subject, title FROM documents WHERE id = ? FOR UPDATE");
         $docStmt->execute([$id]);
         $doc = $docStmt->fetch();
         
@@ -69,8 +69,15 @@ if ($action === 'list_pending') {
         }
         
         // 1. Update the document status
-        $stmt = $pdo->prepare("UPDATE documents SET status = ? WHERE id = ?");
-        $stmt->execute([$status, $id]);
+        $rejectionReason = $_POST['rejection_reason'] ?? null;
+        $stmt = $pdo->prepare("UPDATE documents SET status = ?, rejection_reason = ? WHERE id = ?");
+        $stmt->execute([$status, $status === 'rejected' ? $rejectionReason : null, $id]);
+        
+        $msg = $status === 'approved' 
+               ? "Your document '" . htmlspecialchars($doc['title']) . "' has been approved and published!"
+               : "Your document '" . htmlspecialchars($doc['title']) . "' was rejected. Reason: " . htmlspecialchars($rejectionReason);
+        $notifStmt = $pdo->prepare("INSERT INTO notifications (user_id, message) VALUES (?, ?)");
+        $notifStmt->execute([$doc['user_id'], $msg]);
         
         // 2. If approved, calculate and award credits
         if ($status === 'approved') {
@@ -206,6 +213,102 @@ if ($action === 'list_pending') {
         
         $pdo->commit();
         echo json_encode(['status' => 'success', 'message' => 'Faculty assigned subjects updated successfully.']);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        echo json_encode(['status' => 'error', 'message' => 'Database error.']);
+    }
+} elseif ($action === 'list_reports') {
+    try {
+        $baseQuery = "SELECT r.*, d.title, d.file_path, d.subject, u.username as reporter_username 
+                      FROM document_reports r 
+                      JOIN documents d ON r.document_id = d.id 
+                      JOIN users u ON r.reported_by = u.id 
+                      WHERE r.status = 'pending'";
+                      
+        if ($_SESSION['role'] === 'principle') {
+            $stmt = $pdo->prepare($baseQuery . " ORDER BY r.created_at ASC");
+            $stmt->execute();
+        } else {
+            $primary = $_SESSION['primary_subject'] ?? null;
+            $additional = $_SESSION['additional_subjects'] ?? [];
+            $subjects = [];
+            if ($primary) $subjects[] = $primary;
+            $subjects = array_merge($subjects, $additional);
+            
+            if (empty($subjects)) {
+                echo json_encode(['status' => 'success', 'data' => []]);
+                exit;
+            }
+            $inQuery = implode(',', array_fill(0, count($subjects), '?'));
+            $stmt = $pdo->prepare($baseQuery . " AND d.subject IN ($inQuery) ORDER BY r.created_at ASC");
+            $stmt->execute($subjects);
+        }
+        echo json_encode(['status' => 'success', 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+    } catch (PDOException $e) {
+        echo json_encode(['status' => 'error', 'message' => 'Database error.']);
+    }
+} elseif ($action === 'resolve_report') {
+    $reportId = $_POST['report_id'] ?? 0;
+    $resolution = $_POST['resolution'] ?? '';
+    
+    if (!in_array($resolution, ['dismiss', 'delete'])) {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid resolution.']);
+        exit;
+    }
+    
+    try {
+        $pdo->beginTransaction();
+        
+        $stmt = $pdo->prepare("SELECT r.document_id, d.file_path, d.subject FROM document_reports r JOIN documents d ON r.document_id = d.id WHERE r.id = ? FOR UPDATE");
+        $stmt->execute([$reportId]);
+        $report = $stmt->fetch();
+        
+        if (!$report) {
+            $pdo->rollBack();
+            echo json_encode(['status' => 'error', 'message' => 'Report not found.']);
+            exit;
+        }
+        
+        $primary = $_SESSION['primary_subject'] ?? null;
+        $additional = $_SESSION['additional_subjects'] ?? [];
+        if ($_SESSION['role'] === 'faculty' && $report['subject'] !== $primary && !in_array($report['subject'], $additional)) {
+            $pdo->rollBack();
+            echo json_encode(['status' => 'error', 'message' => 'Unauthorized subject.']);
+            exit;
+        }
+        
+        if ($resolution === 'dismiss') {
+            $update = $pdo->prepare("UPDATE document_reports SET status = 'resolved_kept' WHERE id = ?");
+            $update->execute([$reportId]);
+            $pdo->commit();
+            echo json_encode(['status' => 'success', 'message' => 'Report dismissed.']);
+        } else {
+            $docId = $report['document_id'];
+            $path = '../' . $report['file_path'];
+            
+            if (file_exists($path)) {
+                unlink($path);
+            }
+            
+            // To keep the report history, set document_id to NULL before deleting the document if FK is CASCADE
+            $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
+            $update = $pdo->prepare("UPDATE document_reports SET status = 'resolved_deleted', document_id = NULL WHERE id = ?");
+            $update->execute([$reportId]);
+            
+            // Also update any other pending reports for this document to deleted
+            $updateOthers = $pdo->prepare("UPDATE document_reports SET status = 'resolved_deleted', document_id = NULL WHERE document_id = ?");
+            $updateOthers->execute([$docId]);
+            
+            $del = $pdo->prepare("DELETE FROM documents WHERE id = ?");
+            $del->execute([$docId]);
+            
+            $pdo->exec("SET FOREIGN_KEY_CHECKS=1");
+            
+            $pdo->commit();
+            echo json_encode(['status' => 'success', 'message' => 'Document deleted and report resolved.']);
+        }
     } catch (Exception $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();

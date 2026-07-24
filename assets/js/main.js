@@ -183,7 +183,10 @@ async function loadDocuments() {
                 card.className = 'card glass';
                 card.onclick = () => openDocumentView(doc.id);
                 card.innerHTML = `
-                    <div class="card-title">${doc.title}</div>
+                    <div class="card-title" style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <span>${doc.title}</span>
+                        <button class="btn btn-secondary" style="padding:0.2rem 0.5rem; background:transparent; border:none; box-shadow:none; font-size:1.2rem;" onclick="event.stopPropagation(); openReportModal(${doc.id})" title="Report this document">🚩</button>
+                    </div>
                     <div class="card-meta">
                         <span>By ${doc.username}</span>
                         <span>★ ${parseFloat(doc.avg_rating).toFixed(1)}</span>
@@ -346,7 +349,7 @@ async function loadAdminPending() {
                     <td><a href="${doc.file_path}" target="_blank">View File</a></td>
                     <td class="admin-actions">
                         <button class="btn btn-primary" onclick="adminAction(${doc.id}, 'approved')">Approve</button>
-                        <button class="btn btn-secondary" onclick="adminAction(${doc.id}, 'rejected')">Reject</button>
+                        <button class="btn btn-secondary" onclick="openRejectionModal(${doc.id})">Reject</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -483,4 +486,289 @@ async function updateFaculty(id) {
 
 if (document.getElementById('faculty-table')) {
     loadFacultyList();
+}
+
+// Notifications Logic
+document.addEventListener('DOMContentLoaded', () => {
+    const navLinks = document.querySelector('.nav-links');
+    if (navLinks && document.getElementById('logout-btn')) {
+        fetchNotifications();
+    }
+});
+
+function fetchNotifications() {
+    fetch('api/fetch_notifications.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                renderNotifications(data.data, data.unread_count);
+            }
+        })
+        .catch(console.error);
+}
+
+function renderNotifications(notifications, unreadCount) {
+    let notifWrapper = document.getElementById('notif-wrapper');
+    if (!notifWrapper) {
+        notifWrapper = document.createElement('div');
+        notifWrapper.id = 'notif-wrapper';
+        notifWrapper.className = 'notification-wrapper';
+        
+        notifWrapper.innerHTML = `
+            <button class="notification-bell" id="notif-bell" onclick="toggleNotifications()">
+                🔔
+                <span class="unread-badge" id="notif-badge" style="display: none;">0</span>
+            </button>
+            <div class="notification-dropdown glass" id="notif-dropdown">
+                <div class="notification-header">Notifications</div>
+                <div id="notif-list" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+        `;
+        
+        const navLinks = document.querySelector('.nav-links');
+        const profileBtn = navLinks.querySelector('a[href="profile.php"]');
+        if (profileBtn) {
+            navLinks.insertBefore(notifWrapper, profileBtn);
+        } else {
+            navLinks.appendChild(notifWrapper);
+        }
+        
+        document.addEventListener('click', (e) => {
+            if (!notifWrapper.contains(e.target)) {
+                const dropdown = document.getElementById('notif-dropdown');
+                if (dropdown) dropdown.classList.remove('active');
+            }
+        });
+    }
+
+    const badge = document.getElementById('notif-badge');
+    if (unreadCount > 0) {
+        badge.textContent = unreadCount;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+
+    const list = document.getElementById('notif-list');
+    if (notifications.length === 0) {
+        list.innerHTML = '<div class="notification-item" style="text-align:center; color:var(--text-secondary);">No notifications</div>';
+    } else {
+        list.innerHTML = notifications.map(n => `
+            <div class="notification-item ${n.is_read == 0 ? 'unread' : ''}">
+                ${n.message}
+                <span class="notification-date">${new Date(n.created_at).toLocaleString()}</span>
+            </div>
+        `).join('');
+    }
+}
+
+window.toggleNotifications = function() {
+    const dropdown = document.getElementById('notif-dropdown');
+    dropdown.classList.toggle('active');
+    
+    const badge = document.getElementById('notif-badge');
+    if (dropdown.classList.contains('active') && badge.style.display !== 'none') {
+        fetch('api/mark_notifications_read.php')
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    badge.style.display = 'none';
+                    document.querySelectorAll('.notification-item.unread').forEach(el => el.classList.remove('unread'));
+                }
+            });
+    }
+};
+
+// Rejection Feedback Logic
+window.openRejectionModal = function(id) {
+    const docIdInput = document.getElementById('reject-doc-id');
+    if (docIdInput) {
+        docIdInput.value = id;
+        document.getElementById('rejection-reason').value = '';
+        openModal('rejection-modal');
+    }
+};
+
+const rejectionForm = document.getElementById('rejection-form');
+if (rejectionForm) {
+    rejectionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('reject-doc-id').value;
+        const reason = document.getElementById('rejection-reason').value;
+        
+        const formData = new FormData();
+        formData.append('action', 'update_status');
+        formData.append('id', id);
+        formData.append('status', 'rejected');
+        formData.append('rejection_reason', reason);
+
+        try {
+            const res = await fetch(`${API_BASE}/admin.php`, { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                showToast(data.message, 'success');
+                closeModal('rejection-modal');
+                if (typeof loadAdminPending === 'function') loadAdminPending();
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (err) {
+            showToast('Rejection action failed.', 'error');
+        }
+    });
+}
+
+// My Uploads Logic
+async function loadMyUploads() {
+    const list = document.getElementById('my-uploads-list');
+    if (!list) return;
+    
+    try {
+        const res = await fetch(`${API_BASE}/documents.php?action=my_uploads`);
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            list.innerHTML = '';
+            if (data.data.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-secondary);">You have not uploaded any documents yet.</p>';
+                return;
+            }
+            
+            data.data.forEach(doc => {
+                const item = document.createElement('div');
+                item.style = 'padding: 1rem; border-bottom: 1px solid var(--border-color);';
+                
+                let rejectionHtml = '';
+                if (doc.status === 'rejected' && doc.rejection_reason) {
+                    rejectionHtml = `
+                        <div style="background: rgba(231, 76, 60, 0.1); border-left: 4px solid #e74c3c; padding: 1rem; margin-top: 0.5rem; border-radius: 0 4px 4px 0;">
+                            <strong style="color: #c0392b;">Rejection Feedback:</strong> 
+                            <span style="color: var(--text-primary);">${doc.rejection_reason}</span>
+                        </div>
+                    `;
+                }
+                
+                let statusColor = doc.status === 'approved' ? 'var(--accent-color)' : (doc.status === 'rejected' ? '#e74c3c' : 'var(--text-secondary)');
+                
+                item.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-weight:600; font-size:1.1rem; color:var(--text-primary);">${doc.title}</div>
+                        <span class="badge" style="text-transform:capitalize; background-color:${statusColor}20; color:${statusColor}; border-color:${statusColor}40;">${doc.status}</span>
+                    </div>
+                    <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.3rem;">
+                        ${doc.subject} • ${doc.tag} • Uploaded on ${new Date(doc.created_at).toLocaleDateString()}
+                    </div>
+                    ${rejectionHtml}
+                `;
+                list.appendChild(item);
+            });
+        }
+    } catch (e) {
+        list.innerHTML = '<p style="color:#e74c3c;">Failed to load uploads.</p>';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('my-uploads-list')) {
+        loadMyUploads();
+    }
+});
+
+// Reporting Logic
+window.openReportModal = function(id) {
+    const docIdInput = document.getElementById('report-doc-id');
+    if (docIdInput) {
+        docIdInput.value = id;
+        document.getElementById('report-form').reset();
+        openModal('report-modal');
+    }
+};
+
+const reportForm = document.getElementById('report-form');
+if (reportForm) {
+    reportForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(reportForm);
+        
+        try {
+            const res = await fetch(`${API_BASE}/report_document.php`, { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                showToast(data.message, 'success');
+                closeModal('report-modal');
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (err) {
+            showToast('Failed to submit report.', 'error');
+        }
+
+// Reported Documents Logic
+async function loadReportedDocuments() {
+    const tbody = document.querySelector('#admin-reports-table tbody');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/admin.php?action=list_reports`);
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            tbody.innerHTML = '';
+            if (data.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No pending reports</td></tr>';
+                return;
+            }
+
+            data.data.forEach(report => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <div><strong>${report.title}</strong></div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary);"><a href="${report.file_path}" target="_blank">View File</a></div>
+                    </td>
+                    <td>${report.reporter_username}</td>
+                    <td>${report.reason}</td>
+                    <td>${new Date(report.created_at).toLocaleDateString()}</td>
+                    <td class="admin-actions">
+                        <button class="btn btn-secondary" onclick="resolveReport(${report.id}, 'dismiss')">Dismiss</button>
+                        <button class="btn btn-primary" style="background:#e74c3c;" onclick="resolveReport(${report.id}, 'delete')">Delete Document</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    } catch (err) {
+        showToast('Failed to load reported documents.', 'error');
+    }
+}
+
+async function resolveReport(reportId, action) {
+    if (!confirm(`Are you sure you want to ${action} this report?${action === 'delete' ? ' This will permanently delete the document.' : ''}`)) return;
+
+    const formData = new FormData();
+    formData.append('action', 'resolve_report');
+    formData.append('report_id', reportId);
+    formData.append('resolution', action);
+
+    try {
+        const res = await fetch(`${API_BASE}/admin.php`, { method: 'POST', body: formData });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            loadReportedDocuments();
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (err) {
+        showToast('Failed to resolve report.', 'error');
+    }
+}
+
+if (document.getElementById('admin-reports-table')) {
+    loadReportedDocuments();
+}
+    });
 }
