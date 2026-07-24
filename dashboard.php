@@ -48,8 +48,14 @@ $username = $_SESSION['username'] ?? '';
         </select>
         <select id="tag-filter">
             <option value="">All Tags</option>
-            <option value="SYBTECH - Sem 3">SYBTECH - Sem 3</option>
-            <option value="SYBTECH - Sem 4">SYBTECH - Sem 4</option>
+            <option value="FY - BTECH - SEM 1">FY - BTECH - SEM 1</option>
+            <option value="FY - BTECH - SEM 2">FY - BTECH - SEM 2</option>
+            <option value="SY - BTECH - SEM 3">SY - BTECH - SEM 3</option>
+            <option value="SY - BTECH - SEM 4">SY - BTECH - SEM 4</option>
+            <option value="TY - BTECH - SEM 5">TY - BTECH - SEM 5</option>
+            <option value="TY - BTECH - SEM 6">TY - BTECH - SEM 6</option>
+            <option value="LY - BTECH - SEM 7">LY - BTECH - SEM 7</option>
+            <option value="LY - BTECH - SEM 8">LY - BTECH - SEM 8</option>
         </select>
     </div>
 
@@ -89,8 +95,14 @@ $username = $_SESSION['username'] ?? '';
             <div class="form-group">
                 <label>Tag</label>
                 <select name="tag" required>
-                    <option value="SYBTECH - Sem 3">SYBTECH - Sem 3</option>
-                    <option value="SYBTECH - Sem 4">SYBTECH - Sem 4</option>
+                    <option value="FY - BTECH - SEM 1">FY - BTECH - SEM 1</option>
+                    <option value="FY - BTECH - SEM 2">FY - BTECH - SEM 2</option>
+                    <option value="SY - BTECH - SEM 3">SY - BTECH - SEM 3</option>
+                    <option value="SY - BTECH - SEM 4">SY - BTECH - SEM 4</option>
+                    <option value="TY - BTECH - SEM 5">TY - BTECH - SEM 5</option>
+                    <option value="TY - BTECH - SEM 6">TY - BTECH - SEM 6</option>
+                    <option value="LY - BTECH - SEM 7">LY - BTECH - SEM 7</option>
+                    <option value="LY - BTECH - SEM 8">LY - BTECH - SEM 8</option>
                 </select>
             </div>
             <div class="form-group">
